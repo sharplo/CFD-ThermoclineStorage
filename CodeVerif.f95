@@ -61,7 +61,7 @@ CONTAINS
 		INTEGER :: nCells, errorFlag, discInfLoc, stdyInfLoc, pt, tStep, i, j
 		REAL, ALLOCATABLE :: manSol(:), Temp_f(:), Temp_pre(:), log_dx(:), err_string(:,:)
 
-		height = 1.; d_f = 0.1; dt = 1E-3; Temp_in = 1.
+		height = 1.; d_f = 0.2; dt = 1E-3; Temp_in = 1.
 		pt = 11; nCells = 8
 		k = 2*Pi*waveNum/height
 			
