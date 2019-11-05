@@ -161,7 +161,7 @@ CONTAINS
 		IF (MMS .EQV. .TRUE.) THEN
 			DO i = 1,nCells
 				exSol = 2./(k*dx) * cos(k*dx*(i-1)) * sin(k*dx/2.) ! cell average of T(x)=cos(kx)
-				err_i = abs( (Temp_a(i)-exSol)/(2./k*dx) ) ! typical value
+				err_i = abs( (Temp_a(i)-exSol)/(2./(k*dx)) ) ! typical value
 				err_L1 = err_L1 + err_i
 				err_L2 = err_L2 + err_i*err_i
 				IF (err_i > err_inf) THEN
@@ -192,9 +192,13 @@ CONTAINS
 		REAL, ALLOCATABLE :: Temp_f(:), err_f(:)
 
 		height = 16.; sigma = 0.00005; d_f = 0.4; Temp_in = 0.
-		n = 400; s = 8
+		n = 260; s = 8
 		k = 2*Pi*waveNum/height
 		
+		DO i = 1,n
+			log_dx(i) = LOG10(height/(s*i))
+		END DO
+
 		DO nCells = s, 8*n, s
 			
 			ALLOCATE(Temp_f(nCells), err_f(nCells), STAT=errorFlag)
@@ -221,7 +225,7 @@ CONTAINS
 					
 					abs(err_L2 - err_L2_pre) < ErrThd * abs(err_L2_pre)) THEN
 						
-						IF (mod(nCells,400) == 0) THEN ! to reduce computational cost
+						IF (mod(nCells,8) == 0) THEN ! to reduce computational cost
 							WRITE(*,"(A, 1X, I4, 1X, A, 1X, I4)") "For", nCells, "nCells, manufactured solution converges after step", i
 							WRITE(*,*) err_L2, err_inf, err_inf_loc
 							WRITE(*,*) abs(err_L2 - err_L2_pre), ErrThd * abs(err_L2_pre)
@@ -250,10 +254,6 @@ CONTAINS
 
 		END DO
 		
-		DO i = 1,n
-			log_dx(i) = LOG10(dx/i)
-		END DO
-
 		CALL PlotFigure(3, "err_L1.dat", "log10(dx)", log_dx, "log10(L1)", err_string(1,:), 8*n/s)
 		CALL PlotFigure(4, "err_L2.dat", "log10(dx)", log_dx, "log10(L2)", err_string(2,:), 8*n/s)
 		CALL PlotFigure(7, "err_inf.dat", "log10(dx)", log_dx, "log10(L_inf)", err_string(3,:), 8*n/s)
