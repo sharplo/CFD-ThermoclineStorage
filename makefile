@@ -2,7 +2,8 @@
 # Macros
 EXE = thermocline
 F95 = gfortran
-FLAGS = -g -fimplicit-none -fbounds-check -fbacktrace -fcheck=all -finit-real=snan -ffpe-trap=zero,overflow,underflow,invalid,denormal -O0
+#FLAGS = -fdefault-real-8 -g -fimplicit-none -fbounds-check -fbacktrace -ffpe-trap=zero,overflow,underflow,invalid -O0
+FLAGS = -fdefault-real-8 -O2
 
 # Source and object
 SRCF95 = InOut.f95 SemiDiscret.f95 CodeVerif.f95 main.f95

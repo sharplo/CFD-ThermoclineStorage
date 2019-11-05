@@ -26,10 +26,10 @@ CONTAINS
 
 		DO i = 1,nCells
 			
-			IF ( (Rel .EQV. .TRUE.) .AND. arr_i(i) /= 0) THEN
+			IF (Rel .EQV. .FALSE.) THEN
+				err_i = abs(arr_f(i) - arr_i(i))
+			ELSE IF ( (Rel .EQV. .TRUE.) .AND. (arr_i(i) /= 0.) ) THEN
 				err_i = abs( (arr_f(i) - arr_i(i)) / arr_i(i) )
-			ELSE IF (Rel .EQV. .FALSE.) THEN
-				err_i = abs( (arr_f(i) - arr_i(i)) )
 			ELSE
 				WRITE(*,*) "Error: devided by 0!"
 				STOP
@@ -56,13 +56,15 @@ CONTAINS
 		REAL, INTENT(IN) :: Pi, ErrThd
 		INTEGER, INTENT(IN) :: waveNum, MaxTStep
 		
-		REAL :: height, sigma, d_f, u_f, Temp_in, k, dx, dt, &
+		REAL :: height, sigma, d_f, u_f, Pe, Temp_in, k, dx, dt, &
 			discL1, discL2, discInf, stdyL1, stdyL2, stdyInf
 		INTEGER :: nCells, errorFlag, discInfLoc, stdyInfLoc, pt, tStep, i, j
 		REAL, ALLOCATABLE :: manSol(:), Temp_f(:), Temp_pre(:), log_dx(:), err_string(:,:)
 
-		height = 1.; d_f = 0.2; dt = 1E-3; Temp_in = 1.
-		pt = 11; nCells = 8
+!		height = 16.; d_f = 0.4; dt = 1E-4
+		height = 64.; u_f = 1E-2; dt = 1E-5; Pe = 1000.
+!		height = 1.; sigma = 0.6; d_f = 0.1; dt = 1E-4
+		pt = 15; nCells = 8
 		k = 2*Pi*waveNum/height
 			
 		ALLOCATE(log_dx(pt), err_string(4,pt), STAT=errorFlag)
@@ -71,6 +73,10 @@ CONTAINS
 			STOP
 		END IF
 		
+		DO i = 1,pt
+			log_dx(i) = LOG10(height/nCells) - (i-1)*LOG10(2.)
+		END DO
+
 		i = 0
 
 		DO WHILE (i < pt) ! number of points in graphs for OV study
@@ -81,12 +87,12 @@ CONTAINS
 				STOP
 			END IF
 			
-			dx = height/nCells
-			sigma = d_f/nCells
+!			dx = height/nCells; sigma = d_f/nCells
+			dx = height/nCells; sigma = u_f*dt/dx; d_f = nCells*sigma/Pe
+!			dx = height/nCells
 
 			DO j = 1,nCells
 				manSol(j) = cos(k*dx*(j-1./2.)) ! manufactured solution T = cos(kx)
-!				manSol(j) = 2./(k*dx) * cos(k*dx*(j-1)) * sin(k*dx/2.) ! cell average of T(x)=cos(kx)
 			END DO
 			
 			DO j = 1,nCells
@@ -100,27 +106,27 @@ CONTAINS
 					Temp_pre(j) = Temp_f(j)
 				END DO
 
-				CALL EvolveTempFluid(sigma, d_f, Temp_in, nCells, dx, .TRUE., k, Temp_f)
-				IF (tStep > 1) THEN ! otherwise divided by 0
-!					WRITE(*,*) "before", stdyL1, stdyL2, stdyInf, stdyInfLoc
-					CALL CalErrorNorms(nCells, Temp_f, Temp_pre, .FALSE., stdyL1, stdyL2, stdyInf, stdyInfLoc)
-!					WRITE(*,*) "after", stdyL1, stdyL2, stdyInf, stdyInfLoc
-					IF (stdyL2/dt < ErrThd) THEN
-						WRITE(*,"(A, 1X, I5, 1X, A, 1X, I5)") "For", nCells, "nCells, manufactured solution converges after step", tStep
-						WRITE(*,*) "stdy", stdyL1, stdyL2, stdyInf, stdyInfLoc
-						WRITE(*,*) dt, stdyL2/dt
-						EXIT
-					ELSE IF (tStep == MaxTStep) THEN
-						WRITE(*,"(A, 1X, I5, 1X, A, 1X, I5)") "For", nCells, "nCells, manufactured solution CANNOT converge."
-						WRITE(*,*) "stdy", stdyL1, stdyL2, stdyInf, stdyInfLoc
-						WRITE(*,*) dt, stdyL2/dt
-					END IF
+				CALL EvolveTempFluid(sigma, d_f, manSol(1), nCells, dx, .TRUE., k, Temp_f)
+				
+!				WRITE(*,*) "before", stdyL1, stdyL2, stdyInf, stdyInfLoc
+				CALL CalErrorNorms(nCells, Temp_f, Temp_pre, .FALSE., stdyL1, stdyL2, stdyInf, stdyInfLoc)
+!				WRITE(*,*) "after", stdyL1, stdyL2, stdyInf, stdyInfLoc
 
+				IF (stdyL2/dt < ErrThd) THEN	
+					WRITE(*,"(A, 1X, F3.0, 1X, A, 1X, I5)") "For 2^", LOG(REAL(nCells))/LOG(2.), "cells, &
+						manufactured solution converges after step", tStep
+					WRITE(*,*) stdyL1, stdyL2, stdyInf, stdyInfLoc, "stdy"
+					WRITE(*,*) dt, stdyL2/dt
+					EXIT
+				ELSE IF (tStep == MaxTStep) THEN
+					WRITE(*,"(A, 1X, F3.0, 1X, A, 1X, I5)") "For 2^", LOG(REAL(nCells))/LOG(2.), "cells, &
+						manufactured solution CANNOT converge."
 				END IF
+
 			END DO
 			
 			CALL CalErrorNorms(nCells, Temp_f, manSol, .TRUE., discL1, discL2, discInf, discInfLoc)
-			WRITE(*,*) "disc", discL1, discL2, discInf, discInfLoc
+			WRITE(*,*) discL1, discL2, discInf, discInfLoc, "disc"
 			err_string(1, i+1) = LOG10(discL1)
 			err_string(2, i+1) = LOG10(discL2)
 			err_string(3, i+1) = LOG10(discInf)
@@ -137,10 +143,6 @@ CONTAINS
 
 		END DO
 		
-		DO i = 1,pt
-			log_dx(i) = LOG10(dx) - (i-1)*LOG10(2.)
-		END DO
-
 		CALL PlotFigure(3, "discL1.dat", "log10(dx)", log_dx, "log10(L1)", err_string(1,:), pt)
 		CALL PlotFigure(4, "discL2.dat", "log10(dx)", log_dx, "log10(L2)", err_string(2,:), pt)
 		CALL PlotFigure(7, "discInf.dat", "log10(dx)", log_dx, "log10(L_Inf)", err_string(3,:), pt)

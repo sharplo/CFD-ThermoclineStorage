@@ -39,7 +39,8 @@ CONTAINS
 			Temp_f(nCells) = Temp_f(nCells) + flux + manSol
 
 		ELSE ! real simulation
-
+			WRITE(*,*) "Error: nothing here yet!"
+			STOP
 		END IF
 
 	END SUBROUTINE EvolveTempFluid

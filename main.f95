@@ -13,7 +13,7 @@ PROGRAM main
 	INTEGER :: nCells, nCycles, nTSteps, err_inf_loc, waveNum, i
 	REAL, DIMENSION(100) :: time, state
 	
-	REAL, PARAMETER :: Pi = 3.141592654, ErrThd = 1E-4
+	REAL, PARAMETER :: Pi = 3.141592654, ErrThd = 1E-3
 	INTEGER, PARAMETER :: MaxTStep = 1E5
 	
 	waveNum = 1

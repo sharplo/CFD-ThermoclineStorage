@@ -28,8 +28,11 @@ def Plot_LineSlope(fileName):
 	plt.xlabel(axisLabel[0])
 	plt.ylabel(r"$\Delta$" + axisLabel[1] + r"/$\Delta$" + axisLabel[0])
 	plt.title(fileName[0:-4] + "_slope")
-	plt.savefig("./figures/"+ fileName[0:-4] + "_slope" + ".png")
+	plt.savefig("./figures/"+ fileName[0:-4] + "_slope.png")
 	plt.close()
+
+	with open(fileName[0:-4] + "_slope.dat", "w") as f2:
+		f2.write(np.array2string(xySlope))
 
 Plot_Line("storstate.dat")
 Plot_Line("discL1.dat")
