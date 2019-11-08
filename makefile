@@ -2,7 +2,7 @@
 # Macros
 EXE = thermocline
 F95 = gfortran
-#FLAGS = -fdefault-real-8 -g -fimplicit-none -fbounds-check -fbacktrace -ffpe-trap=zero,overflow,underflow,invalid -O0
+#FLAGS = -g -fimplicit-none -fbounds-check -fbacktrace -ffpe-trap=zero,overflow,underflow,invalid -fdefault-real-8 -O0
 FLAGS = -fdefault-real-8 -O2
 
 # Source and object

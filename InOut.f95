@@ -47,15 +47,15 @@ CONTAINS
 
 	END SUBROUTINE Input
 
-	SUBROUTINE PlotFigure(fileUnit, fileName, xLabel, x, yLabel, y, n)
+	SUBROUTINE PlotFigure(fileUnit, fileName, xLabel, yLabel, lineLabel, nx, ny, arr)
 		
 		IMPLICIT NONE
 		
-		INTEGER, INTENT(IN) :: fileUnit, n
-		CHARACTER(LEN=*), INTENT(IN) :: fileName, xLabel, yLabel
-		REAL, INTENT(IN) :: x(n), y(n)
+		INTEGER, INTENT(IN) :: fileUnit, nx, ny
+		CHARACTER(LEN=*), INTENT(IN) :: fileName, xLabel, yLabel, lineLabel(nx)
+		REAL, INTENT(IN) :: arr(nx,ny)
 
-		INTEGER :: errorFlag, i
+		INTEGER :: errorFlag, i, j
 		
 		IF (fileUnit == 0 .OR. fileUnit == 5 .OR. fileUnit == 6) THEN
 			WRITE(*,*) "ERROR: fileUnit = 0,5,6 are reserved!"
@@ -68,9 +68,20 @@ CONTAINS
 			STOP
 		END IF
 		
+		! Write labels
 		WRITE(fileUnit,"(A, 1X, A)") TRIM(xLabel), TRIM(yLabel)
-		DO i=1,n
-			WRITE(fileUnit,"(E13.6, 1X, E13.6)") x(i), y(i)
+		DO i = 1,nx
+			WRITE(fileUnit,"(1X, A, $)") TRIM(lineLabel(i))
+		END DO
+		WRITE(fileUnit, "(A)")
+		
+		! Write data
+		DO j = 1,ny 
+			WRITE(fileUnit,"(E13.6, $)") arr(1,j)
+			DO i = 2,nx
+				WRITE(fileUnit, "(1X, E13.6, $)") arr(i,j)
+			END DO
+			WRITE(fileUnit, "(A)") 
 		END DO
 
 		CLOSE(UNIT=fileUnit, IOSTAT=errorFlag)

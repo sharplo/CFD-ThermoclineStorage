@@ -6,7 +6,10 @@ MODULE Code_Verification
 	PRIVATE
 
 	PUBLIC CalErrorNorms, OrderVerification
-
+	
+	REAL, PARAMETER :: Pi = 4*ATAN(1.), ErrThd = 1E-4
+	INTEGER, PARAMETER :: waveNum = 1, MaxTStep = 1E6
+	
 CONTAINS
 
 	SUBROUTINE CalErrorNorms(nCells, arr_f, arr_i, Rel, errL1, errL2, errInf, errInfLoc)
@@ -29,7 +32,7 @@ CONTAINS
 			IF (Rel .EQV. .FALSE.) THEN
 				err_i = abs(arr_f(i) - arr_i(i))
 			ELSE IF ( (Rel .EQV. .TRUE.) .AND. (arr_i(i) /= 0.) ) THEN
-				err_i = abs( (arr_f(i) - arr_i(i)) / arr_i(i) )
+				err_i = abs( (arr_f(i) - arr_i(i) ) / arr_i(i) )
 			ELSE
 				WRITE(*,*) "Error: devided by 0!"
 				STOP
@@ -49,37 +52,30 @@ CONTAINS
 
 	END SUBROUTINE CalErrorNorms
 	
-	SUBROUTINE OrderVerification(waveNum, Pi, ErrThd, MaxTStep)
+	SUBROUTINE OrderVerification()
 
 		IMPLICIT NONE
 		
-		REAL, INTENT(IN) :: Pi, ErrThd
-		INTEGER, INTENT(IN) :: waveNum, MaxTStep
-		
-		REAL :: height, sigma, d_f, u_f, Pe, Temp_in, k, dx, dt, &
+		REAL :: height, sigma, d_f, u_f, alpha_f, Pe, Temp_in, k, dx, dt, &
 			discL1, discL2, discInf, stdyL1, stdyL2, stdyInf
 		INTEGER :: nCells, errorFlag, discInfLoc, stdyInfLoc, pt, tStep, i, j
-		REAL, ALLOCATABLE :: manSol(:), Temp_f(:), Temp_pre(:), log_dx(:), err_string(:,:)
+		REAL, ALLOCATABLE :: manSol(:), Temp_f(:), Temp_pre(:), err_arr(:,:), loc_arr(:,:), sol_arr(:,:)
+		CHARACTER(LEN=6) :: label(5), label2(3), label3(2)
 
-!		height = 16.; d_f = 0.4; dt = 1E-4
-		height = 64.; u_f = 1E-2; dt = 1E-5; Pe = 1000.
-!		height = 1.; sigma = 0.6; d_f = 0.1; dt = 1E-4
-		pt = 15; nCells = 8
-		k = 2*Pi*waveNum/height
-			
-		ALLOCATE(log_dx(pt), err_string(4,pt), STAT=errorFlag)
+		height = 3.2E6; u_f = 1E0; alpha_f = 3.2E9
+
+		k = 2*Pi*waveNum/height; nCells = 2**3
+		pt = 10
+
+		ALLOCATE(err_arr(4,pt), loc_arr(2,pt), STAT=errorFlag)
 		IF (errorFlag /= 0) THEN
-			WRITE(*,*) "Error: Could not allocate log_dx, err_string!"
+			WRITE(*,*) "Error: Could not allocate err_arr, loc_arr!"
 			STOP
 		END IF
 		
-		DO i = 1,pt
-			log_dx(i) = LOG10(height/nCells) - (i-1)*LOG10(2.)
-		END DO
-
 		i = 0
 
-		DO WHILE (i < pt) ! number of points in graphs for OV study
+		DO WHILE (i < pt) ! number of points in graphs for OVS
 			
 			ALLOCATE(manSol(nCells), Temp_f(nCells), Temp_pre(nCells), STAT=errorFlag)
 			IF (errorFlag /= 0) THEN
@@ -87,17 +83,14 @@ CONTAINS
 				STOP
 			END IF
 			
-!			dx = height/nCells; sigma = d_f/nCells
-			dx = height/nCells; sigma = u_f*dt/dx; d_f = nCells*sigma/Pe
-!			dx = height/nCells
+			dx = height/nCells;
+			! dt = 0.47*dx*dx/alpha_f ! Pe = 1
+			dt = 0.3/(u_f/dx + 2*alpha_f/dx/dx)
+			sigma = u_f*dt/dx; d_f = alpha_f*dt/(dx*dx)
 
 			DO j = 1,nCells
 				manSol(j) = cos(k*dx*(j-1./2.)) ! manufactured solution T = cos(kx)
-			END DO
-			
-			DO j = 1,nCells
-				Temp_f(j) = cos(k*dx*(j-1./2.)) ! manSol taken as initial condition
-!				Temp_f(j) = 2./(k*dx) * cos(k*dx*(j-1)) * sin(k*dx/2.) ! cell average of T(x)=cos(kx)
+				Temp_f(j) = manSol(j) ! manSol taken as initial condition
 			END DO
 			
 			DO tStep = 1,MaxTStep ! evolve manSol over time to confirm steadiness
@@ -106,32 +99,57 @@ CONTAINS
 					Temp_pre(j) = Temp_f(j)
 				END DO
 
-				CALL EvolveTempFluid(sigma, d_f, manSol(1), nCells, dx, .TRUE., k, Temp_f)
+				CALL EvolveTempFluid(sigma, d_f, 1., nCells, dx, .TRUE., k, Temp_f)
 				
-!				WRITE(*,*) "before", stdyL1, stdyL2, stdyInf, stdyInfLoc
 				CALL CalErrorNorms(nCells, Temp_f, Temp_pre, .FALSE., stdyL1, stdyL2, stdyInf, stdyInfLoc)
-!				WRITE(*,*) "after", stdyL1, stdyL2, stdyInf, stdyInfLoc
+				IF (mod(tStep,MaxTStep/10) == 0) THEN
+					WRITE(*,*) "after step", tStep, "dT/dt =", stdyL1/dt, stdyL2/dt, stdyInfLoc
+				END IF
 
-				IF (stdyL2/dt < ErrThd) THEN	
-					WRITE(*,"(A, 1X, F3.0, 1X, A, 1X, I5)") "For 2^", LOG(REAL(nCells))/LOG(2.), "cells, &
+				IF (stdyL2/dt < ErrThd) THEN
+					
+					WRITE(*,"(A, 1X, F3.0, 1X, A, 1X, I7)") "For 2^", LOG(REAL(nCells))/LOG(2.), "cells, &
 						manufactured solution converges after step", tStep
-					WRITE(*,*) stdyL1, stdyL2, stdyInf, stdyInfLoc, "stdy"
-					WRITE(*,*) dt, stdyL2/dt
+					WRITE(*,*) "Temp_f =", Temp_f(1), Temp_f(nCells/2), Temp_f(nCells)
+					WRITE(*,*) "dT/dt =", stdyL2/dt, "stdy error =", stdyL1, stdyL2, stdyInf, stdyInfLoc
+					
+					CALL CalErrorNorms(nCells, Temp_f, manSol, .TRUE., discL1, discL2, discInf, discInfLoc)
+					WRITE(*,*) "disc error =", discL1, discL2, discInf, discInfLoc
+					err_arr(1, i+1) = LOG10(dx)
+					err_arr(2, i+1) = LOG10(discL1)
+					err_arr(3, i+1) = LOG10(discL2)
+					err_arr(4, i+1) = LOG10(discInf)
+					loc_arr(1, i+1) = LOG10(dx)
+					loc_arr(2, i+1) = REAL(discInfLoc)/REAL(nCells)
+			
 					EXIT
+
 				ELSE IF (tStep == MaxTStep) THEN
-					WRITE(*,"(A, 1X, F3.0, 1X, A, 1X, I5)") "For 2^", LOG(REAL(nCells))/LOG(2.), "cells, &
+					
+					WRITE(*,"(A, 1X, F3.0, 1X, A, 1X, I7)") "For 2^", LOG(REAL(nCells))/LOG(2.), "cells, &
 						manufactured solution CANNOT converge."
+					WRITE(*,*) "Temp_f =", Temp_f(1), Temp_f(nCells/2), Temp_f(nCells)
+					WRITE(*,*) "dT/dt =", stdyL2/dt, "stdy error =", stdyL1, stdyL2, stdyInf, stdyInfLoc
+					
+					CALL CalErrorNorms(nCells, Temp_f, manSol, .TRUE., discL1, discL2, discInf, discInfLoc)
+					WRITE(*,*) "disc error =", discL1, discL2, discInf, discInfLoc
+
 				END IF
 
 			END DO
 			
-			CALL CalErrorNorms(nCells, Temp_f, manSol, .TRUE., discL1, discL2, discInf, discInfLoc)
-			WRITE(*,*) discL1, discL2, discInf, discInfLoc, "disc"
-			err_string(1, i+1) = LOG10(discL1)
-			err_string(2, i+1) = LOG10(discL2)
-			err_string(3, i+1) = LOG10(discInf)
-			err_string(4, i+1) = REAL(discInfLoc)
-			
+			IF (nCells == 8) THEN
+				ALLOCATE(sol_arr(3,nCells))
+				DO j = 1,nCells
+					sol_arr(1,j) = (j-1)
+					sol_arr(2,j) = manSol(j)
+					sol_arr(3,j) = Temp_f(j)
+				END DO
+				label2(1) = "x_i"; label2(2) = "manSol"; label2(3) = "appSol"
+				CALL PlotFigure(4, "Temp_f.dat", "x_i", "temperature", label2, 3, nCells, sol_arr)
+				DEALLOCATE(sol_arr)
+			END IF
+
 			DEALLOCATE(manSol, Temp_f, Temp_pre, STAT=errorFlag)
 			IF (errorFlag /= 0) THEN
 				WRITE(*,*) "Error: Could not deallocate manSol, Temp_f, Temp_pre!"
@@ -142,12 +160,12 @@ CONTAINS
 			i = i+1
 
 		END DO
+	
+		label(1) = "dx"; label(2) = "L1"; label(3) = "L2"; label(4) = "Inf"
+		label3(1) = "dx"; label3(2) = "Inf"
+		CALL PlotFigure(2, "discErr.dat", "log10(dx)", "log10(error)", label, 4, pt, err_arr)
+		CALL PlotFigure(3, "discLoc.dat", "log10(dx)", "relPos", label3, 2, pt, loc_arr)
 		
-		CALL PlotFigure(3, "discL1.dat", "log10(dx)", log_dx, "log10(L1)", err_string(1,:), pt)
-		CALL PlotFigure(4, "discL2.dat", "log10(dx)", log_dx, "log10(L2)", err_string(2,:), pt)
-		CALL PlotFigure(7, "discInf.dat", "log10(dx)", log_dx, "log10(L_Inf)", err_string(3,:), pt)
-		CALL PlotFigure(8, "discInfLoc.dat", "log10(dx)", log_dx, "cell", err_string(4,:), pt)
-
 	END SUBROUTINE OrderVerification
 
 END MODULE Code_Verification

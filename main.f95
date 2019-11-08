@@ -6,27 +6,23 @@ PROGRAM main
 
 	IMPLICIT NONE
 	
-	REAL :: height, diameter, Temp_i, u_f, alpha_f, alpha_s, dx, k, sigma, d_f, d_s, &
-		err_L1, err_L2, err_inf, Temp_in
+	REAL :: height, diameter, Temp_i, u_f, alpha_f, alpha_s
 	REAL, DIMENSION(4) :: duration
-	REAL, ALLOCATABLE :: Temp_f(:), Temp_s(:), err_f(:)
-	INTEGER :: nCells, nCycles, nTSteps, err_inf_loc, waveNum, i
-	REAL, DIMENSION(100) :: time, state
-	
-	REAL, PARAMETER :: Pi = 3.141592654, ErrThd = 1E-3
-	INTEGER, PARAMETER :: MaxTStep = 1E5
-	
-	waveNum = 1
-	
+	INTEGER :: nCells, nCycles, nTSteps, i
+	REAL, DIMENSION(2,100) :: state
+	CHARACTER(LEN=6) :: label(2)
+
 	! CALL Input(height, diameter, nCells, Temp_i, u_f, alpha_f, alpha_s, duration, Temp_f, Temp_s, nCycles, nTSteps)
 
+	label(1) = "time"
+	label(2) = "state"
 	DO i = 1,100
-		time(i) = 60.*i
-		state(i) = REAL(StorageState(time(i), (/2500.,500.,2000.,1000./)))
+		state(1,i) = 60.*i
+		state(2,i) = REAL(StorageState(state(1,i), (/2500.,500.,2000.,1000./)))
 	END DO
-	CALL PlotFigure(1, "storstate.dat", "t(s)", time, "State", state, 100)
+	CALL PlotFigure(1, "storstate.dat", "t(s)", "State", label, 2, 100, state)
 	
-	CALL OrderVerification(waveNum, Pi, ErrThd, MaxTStep)
+	CALL OrderVerification()
 
 CONTAINS
 
@@ -50,8 +46,6 @@ CONTAINS
 		ELSE
 			StorageState = 4
 		END IF
-		
-		RETURN
 
 	END FUNCTION StorageState
 
