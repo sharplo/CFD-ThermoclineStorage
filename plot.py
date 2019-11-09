@@ -10,7 +10,6 @@ def Plot_Line(fileName):
 	for i in range(1,len(lineLabel)):
 		plt.plot(xy[:,0], xy[:,i], ".-")
 
-	plt.title(fileName)
 	plt.xlabel(axisLabel[0])
 	plt.ylabel(axisLabel[1])
 	plt.legend(lineLabel[1:])
@@ -33,7 +32,6 @@ def Plot_LineSlope(fileName):
 		xySlope[:,i] = np.diff(xy[:,i])/np.diff(xy[:,0])
 		plt.plot(xySlope[0:n,0], xySlope[0:n,i], ".-")
 	
-	plt.title(fileName[0:-4] + "_slope")
 	plt.xlabel(axisLabel[0])
 	plt.ylabel(r"$\Delta$" + axisLabel[1] + r"/$\Delta$" + axisLabel[0])
 	plt.legend(lineLabel[1:])

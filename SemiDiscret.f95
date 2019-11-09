@@ -6,11 +6,11 @@ MODULE Semi_Discretized_Model
 
 CONTAINS
 
-	SUBROUTINE EvolveTempFluid(sigma, d_f, Temp_in, nCells, dx, MMS, k, Temp_f)
+	SUBROUTINE EvolveTempFluid(sigma, d_f, Temp_0, Temp_L, nCells, dx, MMS, k, Temp_f)
 
 		IMPLICIT NONE
 
-		REAL, INTENT(IN) :: sigma, d_f, Temp_in, dx, k
+		REAL, INTENT(IN) :: sigma, d_f, Temp_0, Temp_L, dx, k
 		INTEGER, INTENT(IN) :: nCells
 		LOGICAL, INTENT(IN) :: MMS
 		REAL, INTENT(INOUT) :: Temp_f(nCells)
@@ -21,7 +21,7 @@ CONTAINS
 		IF (MMS .EQV. .TRUE.) THEN ! using method of manufactured solution with T = cos(kx)
 			
 			! Boundary face where flux comes in
-			flux = -sigma*(-Temp_f(2)/2. + Temp_f(1)/2. + Temp_in) ! assume no conductive flux
+			flux = -sigma*(-Temp_f(2)/2. + Temp_f(1)/2. + Temp_0) ! assume no conductive flux
 			manSol = sigma
 			Temp_f(1) = Temp_f(1) - flux - manSol
 			
@@ -34,7 +34,7 @@ CONTAINS
 			END DO
 			
 			! Boundary face where flux goes out
-			flux = -sigma*Temp_f(nCells) ! assume no conductive flux
+			flux = -sigma*(Temp_L + Temp_f(nCells)/2. -Temp_f(nCells-1)/2.) ! assume no conductive flux
 			manSol = sigma
 			Temp_f(nCells) = Temp_f(nCells) + flux + manSol
 

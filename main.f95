@@ -6,7 +6,7 @@ PROGRAM main
 
 	IMPLICIT NONE
 	
-	REAL :: height, diameter, Temp_i, u_f, alpha_f, alpha_s
+!	REAL :: height, diameter, Temp_i, u_f, alpha_f, alpha_s
 	REAL, DIMENSION(4) :: duration
 	INTEGER :: nCells, nCycles, nTSteps, i
 	REAL, DIMENSION(2,100) :: state
@@ -14,15 +14,14 @@ PROGRAM main
 
 	! CALL Input(height, diameter, nCells, Temp_i, u_f, alpha_f, alpha_s, duration, Temp_f, Temp_s, nCycles, nTSteps)
 
-	label(1) = "time"
-	label(2) = "state"
+	label(1) = "time"; label(2) = "state"
 	DO i = 1,100
 		state(1,i) = 60.*i
 		state(2,i) = REAL(StorageState(state(1,i), (/2500.,500.,2000.,1000./)))
 	END DO
 	CALL PlotFigure(1, "storstate.dat", "t(s)", "State", label, 2, 100, state)
 	
-	CALL OrderVerification()
+	CALL OrderVerificationFluid()
 
 CONTAINS
 
