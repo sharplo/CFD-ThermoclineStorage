@@ -21,8 +21,7 @@ PROGRAM main
 	END DO
 	CALL PlotFigure(1, "storstate.dat", "t(s)", "State", label, 2, 100, state)
 	
-!	CALL OrderVerificationFluid()
-	Call OrderVerificationSolid()
+	CALL OrderVerification
 
 CONTAINS
 

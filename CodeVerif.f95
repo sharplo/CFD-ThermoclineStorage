@@ -5,27 +5,26 @@ MODULE Code_Verification
 
 	PRIVATE
 
-	PUBLIC OrderVerificationFluid, OrderVerificationSolid, ErrThd, MaxTStep
+	PUBLIC OrderVerification
 	
 	REAL, PARAMETER :: Pi = 4*ATAN(1.), ErrThd = 8E-3, &
-		height = 2E3, u_f = 0, alpha_f = 2E3, alpha_s = 2E3, dt = 5.9E-5
-	INTEGER, PARAMETER :: MaxTStep = 1E7, waveNum = 1, pt = 10
+		height = 2E3, u_f = 1E-3, alpha_f = 2E3, alpha_s = 2E3, dt = 3.69E-6
+	INTEGER, PARAMETER :: MaxTStep = 1E7, waveNum = 1, pt = 12
 
 CONTAINS
 
-	SUBROUTINE CalErrorNorms(nCells, arr_f, arr_i, Rel, errL1, errL2, errInf, errInfLoc)
+	FUNCTION ErrorNorms(nCells, arr_f, arr_i, Rel)
 		
 		IMPLICIT NONE
 
+		REAL :: ErrorNorms(4)
 		INTEGER, INTENT(IN) :: nCells
 		REAL, INTENT(IN) :: arr_f(nCells), arr_i(nCells)
 		LOGICAL, INTENT(IN) :: Rel
-		REAL, INTENT(OUT) :: errL1, errL2, errInf
-		INTEGER, INTENT(OUT) :: errInfLoc
 
-		INTEGER :: i
-		REAL :: err_i
-		
+		REAL :: errL1, errL2, errInf, err_i
+		INTEGER :: i, errInfLoc
+
 		errL1 = 0; errL2 = 0; errInf = -1.
 
 		DO i = 1,nCells
@@ -47,11 +46,13 @@ CONTAINS
 			END IF
 
 		END DO
-		
 		errL1 = errL1/nCells
 		errL2 = sqrt(errL2/nCells)
 
-	END SUBROUTINE CalErrorNorms
+		ErrorNorms(1) = errL1; ErrorNorms(2) = errL2;
+		ErrorNorms(3) = errInf; ErrorNorms(4) = REAL(errInfLoc)
+
+	END FUNCTION ErrorNorms
 
 	FUNCTION SteadyState(Temp, sigma, d, Temp_in, nCells, dx, dt, MMS, k)
 
@@ -62,8 +63,8 @@ CONTAINS
 		INTEGER, INTENT(IN) :: nCells
 		LOGICAL, INTENT(IN) :: MMS
 
-		REAL :: Temp_pre(nCells), stdyL1, stdyL2, stdyInf
-		INTEGER :: tStep, stdyInfLoc, i
+		REAL :: Temp_pre(nCells), stdyErr(4)
+		INTEGER :: tStep, i
 
 		SteadyState(:) = Temp(:)
 
@@ -72,22 +73,20 @@ CONTAINS
 			Temp_pre(:) = SteadyState(:) ! for calculating dT/dt
 
 			CALL EvolveTemp(SteadyState, sigma, d, Temp_in, nCells, dx, MMS, k)
-			CALL CalErrorNorms(nCells, SteadyState, Temp_pre, .FALSE., stdyL1, stdyL2, stdyInf, stdyInfLoc)
+			stdyErr(:) = ErrorNorms(nCells, SteadyState, Temp_pre, .FALSE.)
 				
-			! Addressing the progress to user
+			! Address the progress to user
 			IF (mod(tStep,MaxTStep/10) == 0) THEN
-				WRITE(*,*) "after step", tStep, "dT/dt =", stdyL2/dt, "stdyInfLoc =", stdyInfLoc
+				WRITE(*,*) "after step", tStep, "dT/dt =", stdyErr(2)/dt, "stdyInfLoc =", INT(stdyErr(4))
 			END IF
 
-			IF (stdyL2/dt < ErrThd) THEN		
-				WRITE(*,"(A, 1X, F3.0, 1X, A, 1X, I8)") "For 2^", LOG(REAL(nCells))/LOG(2.), "cells, &
-					manufactured solution converges after step", tStep
-				WRITE(*,*) "dT/dt =", stdyL2/dt, "and stdyInfLoc =", stdyInfLoc
+			IF (stdyErr(2)/dt < ErrThd) THEN ! basically dT/dt
+				WRITE(*,*) "Manufactured solution converges after step", tStep
+				WRITE(*,*) "dT/dt =", stdyErr(2)/dt, "and stdyInfLoc =", INT(stdyErr(4))
 				EXIT
 			ELSE IF (tStep == MaxTStep) THEN
-				WRITE(*,"(A, 1X, F3.0, 1X, A)") &
-					"For 2^", LOG(REAL(nCells))/LOG(2.), "cells, manufactured solution CANNOT converge!"
-				WRITE(*,*) "dT/dt =", stdyL2/dt, "and stdyInfLoc =", stdyInfLoc
+				WRITE(*,*) "Manufactured solution CANNOT converge!"
+				WRITE(*,*) "dT/dt =", stdyErr(2)/dt, "and stdyInfLoc =", INT(stdyErr(4))
 				STOP
 			END IF
 
@@ -95,20 +94,21 @@ CONTAINS
 
 	END FUNCTION SteadyState
 
-	SUBROUTINE OrderVerificationFluid()
+	SUBROUTINE OrderVerification()
 
 		IMPLICIT NONE
 		
-		REAL :: k, dx, sigma, d_f, discL1, discL2, discInf
-		REAL, ALLOCATABLE :: manSol(:), Temp_f(:), err_arr(:,:), loc_arr(:,:), sol_arr(:,:)
-		INTEGER :: nCells, errorFlag, discInfLoc, i, j
-		CHARACTER(LEN=6) :: label(5), label2(2), label3(3)
+		REAL :: k_f, k_s, dx, sigma, d_f, d_s, discErr_f(4), discErr_s(4)
+		REAL, ALLOCATABLE :: manSol_f(:), manSol_s(:), Temp_f(:), Temp_s(:), &
+			errArr_f(:,:), errArr_s(:,:), locArr_f(:,:), locArr_s(:,:), solArr(:,:)
+		INTEGER :: nCells, errorFlag, i, j
+		CHARACTER(LEN=6) :: label(3), label2(4), label3(2)
 
-		k = 2*Pi*waveNum/height
+		k_f = 2*Pi*waveNum/height; k_s = 2*k_f
 
-		ALLOCATE(err_arr(4,pt), loc_arr(2,pt), STAT=errorFlag)
+		ALLOCATE(errArr_f(4,pt), errArr_s(4,pt), locArr_f(2,pt), locArr_s(2,pt), STAT=errorFlag)
 		IF (errorFlag /= 0) THEN
-			WRITE(*,*) "Error: Could not allocate err_arr, loc_arr!"
+			WRITE(*,*) "Error: Could not allocate errArr, locArr!"
 			STOP
 		END IF
 		
@@ -116,61 +116,85 @@ CONTAINS
 
 		DO WHILE (i < pt) ! number of points in graphs for OVS
 
-			ALLOCATE(manSol(nCells), Temp_f(nCells), STAT=errorFlag)
+			ALLOCATE(manSol_f(nCells), manSol_s(nCells), Temp_f(nCells), Temp_s(nCells), STAT=errorFlag)
 			IF (errorFlag /= 0) THEN
-				WRITE(*,*) "Error: Could not allocate manSol, Temp_f!"
+				WRITE(*,*) "Error: Could not allocate manSol, Temp!"
 				STOP
 			END IF
 			
-			dx = height/nCells; sigma = u_f*dt/dx; d_f = alpha_f*dt/(dx*dx)
+			dx = height/nCells
+			sigma = u_f*dt/dx
+			d_f = alpha_f*dt/(dx*dx); d_s = alpha_s*dt/(dx*dx)
 
 			DO j = 1,nCells
-				manSol(j) = cos(k*dx*(j-1./2.)) ! manufactured solution T = cos(kx)
+				manSol_f(j) = cos(k_f*dx*(j-1./2.)) ! manufactured solution cos(kx) for fluid phase
+				manSol_s(j) = cos(k_s*dx*(j-1./2.)) ! manufactured solution cos(2kx) for solid phase
 			END DO
+
+			WRITE(*,"(A, 1X, F3.0, 1X, A)") "For 2^", LOG(REAL(nCells))/LOG(2.), "cells,"
 			
-			! Take manSol as initial condition and evolves it over time to until steady
-			Temp_f(:) = SteadyState(manSol, sigma, d_f, 1., nCells, dx, dt, .TRUE., k)
+			! Take manSol as initial condition and evolves it over time to reach steady state
+			WRITE(*,*) "Fluid phase:"
+			Temp_f(:) = SteadyState(manSol_f, sigma, d_f, 1., nCells, dx, dt, .TRUE., k_f)
+			discErr_f(:) = ErrorNorms(nCells, Temp_f, manSol_f, .TRUE.)
+			WRITE(*,*) "discL2 =", discErr_f(2), "dicsInf =", discErr_f(3), "at", INT(discErr_f(4))
 			
-			CALL CalErrorNorms(nCells, Temp_f, manSol, .TRUE., discL1, discL2, discInf, discInfLoc)		
-			WRITE(*,*) "discL2 =", discL2, "dicsInf =", discInf, "at", discInfLoc
+			WRITE(*,*) "Solid phase:"
+			Temp_s(:) = SteadyState(manSol_s, 0., d_s, 0., nCells, dx, dt, .TRUE., k_s)			
+			discErr_s(:) = ErrorNorms(nCells, Temp_s, manSol_s, .TRUE.)
+			WRITE(*,*) "discL2 =", discErr_s(2), "dicsInf =", discErr_s(3), "at", INT(discErr_s(4))
 			WRITE(*,"(A)")
 			
-			! Write on file only if the approximate solution is steady
-			err_arr(1, i+1) = LOG10(dx)
-			err_arr(2, i+1) = LOG10(discL1)
-			err_arr(3, i+1) = LOG10(discL2)
-			err_arr(4, i+1) = LOG10(discInf)
-			loc_arr(1, i+1) = LOG10(dx)
-			loc_arr(2, i+1) = REAL(discInfLoc)/REAL(nCells)
+			! Store the error norms for plotting later
+			errArr_f(1, i+1) = LOG10(dx)
+			errArr_f(2, i+1) = LOG10(discErr_f(1))
+			errArr_f(3, i+1) = LOG10(discErr_f(2))
+			errArr_f(4, i+1) = LOG10(discErr_f(3))
+			locArr_f(1, i+1) = LOG10(dx)
+			locArr_f(2, i+1) = discErr_f(4)/REAL(nCells)
 			
-			! Visualize approximate solution and manufactured solution
+			errArr_s(1, i+1) = LOG10(dx)
+			errArr_s(2, i+1) = LOG10(discErr_s(1))
+			errArr_s(3, i+1) = LOG10(discErr_s(2))
+			errArr_s(4, i+1) = LOG10(discErr_s(3))
+			locArr_s(1, i+1) = LOG10(dx)
+			locArr_s(2, i+1) = discErr_s(4)/REAL(nCells)
+
+			! Visualize approximate solutions and manufactured solutions
 			IF (nCells == 8) THEN
 				
-				ALLOCATE(sol_arr(3,nCells), STAT=errorFlag)
+				ALLOCATE(solArr(3,nCells), STAT=errorFlag)
 				IF (errorFlag /= 0) THEN
-					WRITE(*,*) "Error: Could not allocate sol_arr!"
+					WRITE(*,*) "Error: Could not allocate solArr!"
 					STOP
 				END IF
 				
 				DO j = 1,nCells
-					sol_arr(1,j) = (j-1)
-					sol_arr(2,j) = manSol(j)
-					sol_arr(3,j) = Temp_f(j)
+					solArr(1,j) = j
+					solArr(2,j) = manSol_f(j)
+					solArr(3,j) = Temp_f(j)
 				END DO
-				label3(1) = "x_i"; label3(2) = "manSol"; label3(3) = "appSol"
-				CALL PlotFigure(4, "Temp_f.dat", "x_i", "temperature", label3, 3, nCells, sol_arr)
+				label(1) = "x_i"; label(2) = "manSol_f"; label(3) = "appSol"
+				CALL PlotFigure(1, "Temp_f.dat", "x_i", "temperature", label, 3, nCells, solArr)
 				
-				DEALLOCATE(sol_arr, STAT=errorFlag)
+				DO j = 1,nCells ! reuse solArr
+					solArr(2,j) = manSol_s(j)
+					solArr(3,j) = Temp_s(j)
+				END DO
+				label(2) = "manSol_s"
+				CALL PlotFigure(2, "Temp_s.dat", "x_i", "temperature", label, 3, nCells, solArr)
+				
+				DEALLOCATE(solArr, STAT=errorFlag)
 				IF (errorFlag /= 0) THEN
-					WRITE(*,*) "Error: Could not allocate sol_arr!"
+					WRITE(*,*) "Error: Could not allocate solArr!"
 					STOP
 				END IF
 
 			END IF
 
-			DEALLOCATE(manSol, Temp_f, STAT=errorFlag)
+			DEALLOCATE(manSol_f, manSol_s, Temp_f, Temp_s, STAT=errorFlag)
 			IF (errorFlag /= 0) THEN
-				WRITE(*,*) "Error: Could not deallocate manSol, Temp_f!"
+				WRITE(*,*) "Error: Could not deallocate manSol, Temp!"
 				STOP
 			END IF
 			
@@ -179,102 +203,14 @@ CONTAINS
 
 		END DO
 	
-		label(1) = "dx"; label(2) = "L1"; label(3) = "L2"; label(4) = "Inf"
-		label2(1) = "dx"; label2(2) = "Inf"
-		CALL PlotFigure(2, "discErr.dat", "log10(dx)", "log10(error)", label, 4, pt, err_arr)
-		CALL PlotFigure(3, "discLoc.dat", "log10(dx)", "RelPos", label2, 2, pt, loc_arr)
+		label2(1) = "dx"; label2(2) = "L1"; label2(3) = "L2"; label2(4) = "Inf"
+		label3(1) = "dx"; label3(2) = "Inf"
+		CALL PlotFigure(3, "discErr_f.dat", "log10(dx)", "log10(error)", label2, 4, pt, errArr_f)
+		CALL PlotFigure(4, "discLoc_f.dat", "log10(dx)", "RelPos", label3, 2, pt, locArr_f)
 		
-	END SUBROUTINE OrderVerificationFluid
+		CALL PlotFigure(7, "discErr_s.dat", "log10(dx)", "log10(error)", label2, 4, pt, errArr_s)
+		CALL PlotFigure(8, "discLoc_s.dat", "log10(dx)", "RelPos", label3, 2, pt, locArr_s)
 
-	SUBROUTINE OrderVerificationSolid()
-
-		IMPLICIT NONE
-		
-		REAL :: k, dx, d_s, discL1, discL2, discInf
-		REAL, ALLOCATABLE :: manSol(:), Temp_s(:), err_arr(:,:), loc_arr(:,:), sol_arr(:,:)
-		INTEGER :: nCells, errorFlag, discInfLoc, i, j
-		CHARACTER(LEN=6) :: label(5), label2(2), label3(3)
-
-		k = 4*Pi*waveNum/height
-
-		ALLOCATE(err_arr(4,pt), loc_arr(2,pt), STAT=errorFlag)
-		IF (errorFlag /= 0) THEN
-			WRITE(*,*) "Error: Could not allocate err_arr, loc_arr!"
-			STOP
-		END IF
-		
-		i = 0; nCells = 2**3
-
-		DO WHILE (i < pt) ! number of points in graphs for OVS
-
-			ALLOCATE(manSol(nCells), Temp_s(nCells), STAT=errorFlag)
-			IF (errorFlag /= 0) THEN
-				WRITE(*,*) "Error: Could not allocate manSol, Temp_s!"
-				STOP
-			END IF
-			
-			dx = height/nCells; d_s = alpha_s*dt/(dx*dx)
-
-			DO j = 1,nCells
-				manSol(j) = cos(k*dx*(j-1./2.)) ! manufactured solution T = cos(kx)
-			END DO
-			
-			! Take manSol as initial condition and evolves it over time to until steady
-			Temp_s(:) = SteadyState(manSol, 0., d_s, 0., nCells, dx, dt, .TRUE., k)
-			
-			CALL CalErrorNorms(nCells, Temp_s, manSol, .TRUE., discL1, discL2, discInf, discInfLoc)		
-			WRITE(*,*) "discL2 =", discL2, "dicsInf =", discInf, "at", discInfLoc
-			WRITE(*,"(A)")
-			
-			! Write on file only if the approximate solution is steady
-			err_arr(1, i+1) = LOG10(dx)
-			err_arr(2, i+1) = LOG10(discL1)
-			err_arr(3, i+1) = LOG10(discL2)
-			err_arr(4, i+1) = LOG10(discInf)
-			loc_arr(1, i+1) = LOG10(dx)
-			loc_arr(2, i+1) = REAL(discInfLoc)/REAL(nCells)
-			
-			! Visualize approximate solution and manufactured solution
-			IF (nCells == 8) THEN
-				
-				ALLOCATE(sol_arr(3,nCells), STAT=errorFlag)
-				IF (errorFlag /= 0) THEN
-					WRITE(*,*) "Error: Could not allocate sol_arr!"
-					STOP
-				END IF
-				
-				DO j = 1,nCells
-					sol_arr(1,j) = (j-1)
-					sol_arr(2,j) = manSol(j)
-					sol_arr(3,j) = Temp_s(j)
-				END DO
-				label3(1) = "x_i"; label3(2) = "manSol"; label3(3) = "appSol"
-				CALL PlotFigure(4, "Temp_s.dat", "x_i", "temperature", label3, 3, nCells, sol_arr)
-				
-				DEALLOCATE(sol_arr, STAT=errorFlag)
-				IF (errorFlag /= 0) THEN
-					WRITE(*,*) "Error: Could not allocate sol_arr!"
-					STOP
-				END IF
-
-			END IF
-
-			DEALLOCATE(manSol, Temp_s, STAT=errorFlag)
-			IF (errorFlag /= 0) THEN
-				WRITE(*,*) "Error: Could not deallocate manSol, Temp_s!"
-				STOP
-			END IF
-			
-			nCells = nCells*2
-			i = i+1
-
-		END DO
-	
-		label(1) = "dx"; label(2) = "L1"; label(3) = "L2"; label(4) = "Inf"
-		label2(1) = "dx"; label2(2) = "Inf"
-		CALL PlotFigure(2, "discErr.dat", "log10(dx)", "log10(error)", label, 4, pt, err_arr)
-		CALL PlotFigure(3, "discLoc.dat", "log10(dx)", "RelPos", label2, 2, pt, loc_arr)
-		
-	END SUBROUTINE OrderVerificationSolid
+	END SUBROUTINE OrderVerification
 
 END MODULE Code_Verification
