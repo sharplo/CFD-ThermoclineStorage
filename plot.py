@@ -44,6 +44,7 @@ def Plot_LineSlope(fileName):
 
 Plot_Line("storstate.dat")
 Plot_Line("Temp_f.dat")
+Plot_Line("Temp_s.dat")
 Plot_Line("discErr.dat")
 Plot_LineSlope("discErr.dat")
 Plot_Line("discLoc.dat")

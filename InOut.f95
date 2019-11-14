@@ -77,9 +77,9 @@ CONTAINS
 		
 		! Write data
 		DO j = 1,ny 
-			WRITE(fileUnit,"(E13.6, $)") arr(1,j)
+			WRITE(fileUnit,"(E17.10, $)") arr(1,j)
 			DO i = 2,nx
-				WRITE(fileUnit, "(1X, E13.6, $)") arr(i,j)
+				WRITE(fileUnit, "(1X, E17.10, $)") arr(i,j)
 			END DO
 			WRITE(fileUnit, "(A)") 
 		END DO
