@@ -8,7 +8,7 @@ def Plot_Line(fileName):
 		xy = np.loadtxt(f, usecols = np.arange(0, len(lineLabel) ))
 	
 	for i in range(1,len(lineLabel)):
-		plt.plot(xy[:,0], xy[:,i], ".-")
+		plt.plot(xy[:,0], xy[:,i], "-")
 
 	plt.xlabel(axisLabel[0])
 	plt.ylabel(axisLabel[1])
@@ -43,6 +43,9 @@ def Plot_LineSlope(fileName):
 		f2.write(np.array2string(xySlope))
 
 Plot_Line("storstate.dat")
+Plot_Line("Cycle_f.dat")
+Plot_Line("Cycle_s.dat")
+"""
 Plot_Line("Temp_f.dat")
 Plot_Line("Temp_s.dat")
 Plot_Line("discErr_f.dat")
@@ -51,4 +54,4 @@ Plot_LineSlope("discErr_f.dat")
 Plot_LineSlope("discErr_s.dat")
 Plot_Line("discLoc_f.dat")
 Plot_Line("discLoc_s.dat")
-
+"""

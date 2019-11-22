@@ -1,8 +1,11 @@
 MODULE Input_Output
-
-	PRIVATE
-
-	PUBLIC Input, PlotFigure
+	
+	IMPLICIT NONE
+	
+	REAL, PARAMETER :: Pi = 4.*ATAN(1.), ErrThd = 8E-3, &
+		height = 10.5, u_f = 1E-1, alpha_f = 2E-7, alpha_s = 9E-7, dt = 1.51E-2, &
+		h_v = 1000, rho_f = 1899, C_f = 1495, rho_s = 2600, C_s = 900, eps = 0.4
+	INTEGER, PARAMETER :: MaxTStep = 1E7, waveNum = 1, pt = 10
 
 CONTAINS
 
@@ -91,5 +94,64 @@ CONTAINS
 		END IF
 
 	END SUBROUTINE PlotFigure
+
+	SUBROUTINE VisualTemp(nCells, Temp_f, Temp_s, MMS, manSol_f, manSol_s)
+
+		IMPLICIT NONE
+
+		INTEGER, INTENT(IN) :: nCells
+		REAL, INTENT(IN) :: Temp_f(nCells), Temp_s(nCells)
+		REAL, INTENT(IN), OPTIONAL :: manSol_f(nCells), manSol_s(nCells)
+		LOGICAL, INTENT(IN) :: MMS
+
+		REAL, ALLOCATABLE :: solArr(:,:)
+		CHARACTER(LEN=6), ALLOCATABLE :: label(:)
+		INTEGER :: errorFlag, i
+
+		IF (MMS) THEN
+			
+			ALLOCATE(solArr(3,nCells), label(3), STAT=errorFlag)
+			IF (errorFlag /= 0) THEN
+				WRITE(*,*) "Error: could not allocate solArr, label!"
+				STOP
+			END IF
+
+			DO i = 1,nCells
+				solArr(1,i) = i
+				solArr(2,i) = manSol_f(i)
+				solArr(3,i) = Temp_f(i)
+			END DO
+			label(1) = "x_i"; label(2) = "manSol"; label(3) = "appSol"
+			CALL PlotFigure(1, "Temp_f.dat", "x_i", "temperature", label, 3, nCells, solArr)
+				
+			DO i = 1,nCells ! reuse solArr
+				solArr(2,i) = manSol_s(i)
+				solArr(3,i) = Temp_s(i)
+			END DO
+			CALL PlotFigure(2, "Temp_s.dat", "x_i", "temperature", label, 3, nCells, solArr)
+		
+		ELSE
+
+			ALLOCATE(solArr(2,nCells), label(2), STAT=errorFlag)
+			IF (errorFlag /= 0) THEN
+				WRITE(*,*) "Error: could not allocate solArr, label!"
+				STOP
+			END IF
+
+			DO i = 1,nCells
+				solArr(1,i) = i
+				solArr(2,i) = Temp_f(i)
+			END DO
+			label(1) = "x_i"; label(2) = "appSol"
+			CALL PlotFigure(1, "Temp_f.dat", "x_i", "temperature", label, 2, nCells, solArr)
+				
+			DO i = 1,nCells ! reuse solArr
+				solArr(2,i) = Temp_s(i)
+			END DO
+			CALL PlotFigure(2, "Temp_s.dat", "x_i", "temperature", label, 2, nCells, solArr)
+		
+		END IF
+
+	END SUBROUTINE VisualTemp
 
 END MODULE Input_Output

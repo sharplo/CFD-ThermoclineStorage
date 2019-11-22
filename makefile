@@ -2,11 +2,11 @@
 # Macros
 EXE = thermocline
 F95 = gfortran
-FLAGS = -g -fimplicit-none -fbounds-check -fbacktrace -ffpe-trap=zero,overflow,underflow,invalid -fdefault-real-8 -O0
-#FLAGS = -fdefault-real-8 -O3
+#FLAGS = -g -fimplicit-none -fbounds-check -fbacktrace -ffpe-trap=zero,overflow,underflow,invalid -fdefault-real-8 -O0
+FLAGS = -fdefault-real-8 -O3
 
 # Source and object
-SRCF95 = InOut.f95 SemiDiscret.f95 CodeVerif.f95 main.f95
+SRCF95 = InOut.f95 ToolBox.f95 Dynamics.f95 OrderVerif.f95 main.f95
 
 # Pattern rules
 %.o: %.f95
@@ -27,6 +27,6 @@ clean:
 	rm $(OBJF95) *.mod $(EXE)
 
 # Dependencies
-main.o: InOut.o SemiDiscret.o CodeVerif.o
-CodeVerif.o: InOut.o SemiDiscret.o
-
+main.o: InOut.o Dynamics.o OrderVerif.o
+OrderVerif.o: InOut.o ToolBox.o Dynamics.o
+Dynamics.o: InOut.o ToolBox.o
