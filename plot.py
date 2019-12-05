@@ -8,7 +8,7 @@ def Plot_Line(fileName):
 		xy = np.loadtxt(f, usecols = np.arange(0, len(lineLabel) ))
 	
 	for i in range(1,len(lineLabel)):
-		plt.plot(xy[:,0], xy[:,i], "-")
+		plt.plot(xy[:,0], xy[:,i], ".-")
 
 	plt.xlabel(axisLabel[0])
 	plt.ylabel(axisLabel[1])
@@ -42,16 +42,40 @@ def Plot_LineSlope(fileName):
 	with open(fileName[0:-4] + "_slope.dat", "w") as f2:
 		f2.write(np.array2string(xySlope))
 
+def Plot_Line_2(fileName_1, fileName_2):
+	with open(fileName_1, "r") as f1:
+		lineLabel_1 = f1.readline().split()
+		xy_1 = np.loadtxt(f1, usecols = np.arange(0, len(lineLabel_1) ))
+	
+	with open(fileName_2, "r") as f2:
+		axisLabel_2 = f2.readline().split()
+		lineLabel_2 = f2.readline().split()
+		xy_2 = np.loadtxt(f2, usecols = np.arange(0, len(lineLabel_2) ))
+	
+	for i in range(1,len(lineLabel_2)):
+		plt.plot(xy_1[:,0], xy_1[:,i], ":")
+		plt.plot(xy_2[:,0], xy_2[:,i], ".-")
+
+	plt.xlabel(axisLabel_2[0])
+	plt.ylabel(axisLabel_2[1])
+	plt.legend([linelabel_1[1:], lineLabel_2[1:]])
+
+	plt.savefig("./figures/"+ fileName_2[0:-4] + ".png")
+	plt.close()
+
 Plot_Line("storstate.dat")
+"""
+Plot_Line_2("sol-exact.dat", "charge.dat")
+"""
 Plot_Line("Cycle_f.dat")
 Plot_Line("Cycle_s.dat")
-"""
-Plot_Line("Temp_f.dat")
+
+#Plot_Line("Temp_f.dat")
 Plot_Line("Temp_s.dat")
-Plot_Line("discErr_f.dat")
+#Plot_Line("discErr_f.dat")
 Plot_Line("discErr_s.dat")
-Plot_LineSlope("discErr_f.dat")
+#Plot_LineSlope("discErr_f.dat")
 Plot_LineSlope("discErr_s.dat")
-Plot_Line("discLoc_f.dat")
+#Plot_Line("discLoc_f.dat")
 Plot_Line("discLoc_s.dat")
-"""
+

@@ -1,5 +1,7 @@
 MODULE Tools
 
+	USE Input_Output
+
 CONTAINS
 
 	FUNCTION ErrorNorms(nCells, arr_f, arr_i, Rel)
@@ -42,5 +44,63 @@ CONTAINS
 		ErrorNorms(3) = errInf; ErrorNorms(4) = REAL(errInfLoc)
 
 	END FUNCTION ErrorNorms
+
+	REAL FUNCTION EnergyFlux(nTStps, Temp, Temp_ref)
+
+		IMPLICIT NONE
+
+		INTEGER, INTENT(IN) :: nTStps
+		REAL, INTENT(IN) :: Temp(nTStps), Temp_ref
+
+		INTEGER :: i
+		REAL :: var
+		REAL :: dm=1 ! need to be deleted
+		EnergyFlux = 0
+
+		! Trapezoid rule
+		var = Temp(1) - Temp_ref - Temp_ref*LOG(Temp(1)/Temp_ref)
+		EnergyFlux = EnergyFlux + var
+		DO i = 2,nTStps-1
+			var = Temp(i) - Temp_ref - Temp_ref*LOG(Temp(i)/Temp_ref)
+			EnergyFlux = EnergyFlux + 2*var
+		END DO
+		var = Temp(nTStps) - Temp_ref - Temp_ref*LOG(Temp(nTStps)/Temp_ref)
+		EnergyFlux = EnergyFlux + var
+
+		EnergyFlux = EnergyFlux*dm*C_f*dt/2
+
+	END FUNCTION EnergyFlux
+
+	REAL FUNCTION ThermalEnergy(nCells, Temp_f, Temp_s, Temp_d)
+		
+		IMPLICIT NONE
+
+		INTEGER, INTENT(IN) :: nCells
+		REAL, INTENT(IN) :: Temp_f(nCells), Temp_s(nCells), Temp_d
+
+		REAL :: dx, sum_f, sum_s
+
+		ThermalEnergy = 0
+
+		dx = height/nCells
+		sum_f = SUM(Temp_f)*dx - Temp_d*height
+		sum_s = SUM(Temp_s)*dx - Temp_d*height
+		
+		ThermalEnergy = ThermalEnergy + eps*rho_f*C_f*sum_f + (1-eps)*rho_s*C_s*sum_s
+		ThermalEnergy = ThermalEnergy*Pi/4*diameter**2
+
+	END FUNCTION ThermalEnergy
+
+	REAL FUNCTION MaxEnergyStored(Temp_c, Temp_d)
+
+		IMPLICIT NONE
+
+		REAL, INTENT(IN) :: Temp_c, Temp_d
+
+		MaxEnergyStored = eps*rho_f*C_f + (1-eps)*rho_s*C_s
+		MaxEnergyStored = MaxEnergyStored*Pi/4*diameter**2
+		MaxEnergyStored = MaxEnergyStored*height*(Temp_c - Temp_d)
+
+	END FUNCTION MaxEnergyStored
 
 END MODULE Tools

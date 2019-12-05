@@ -1,9 +1,8 @@
-################################### BEWARE OF SPACE INSIDE $()!!!! 
 # Macros
 EXE = thermocline
 F95 = gfortran
-#FLAGS = -g -fimplicit-none -fbounds-check -fbacktrace -ffpe-trap=zero,overflow,underflow,invalid -fdefault-real-8 -O0
-FLAGS = -fdefault-real-8 -O3
+#FLAGS = -g -fimplicit-none -fbounds-check -fbacktrace -ffpe-trap=zero,overflow,underflow,invalid -fdefault-real-8 -fopenmp -O0
+FLAGS = -fdefault-real-8 -fopenmp -O3
 
 # Source and object
 SRCF95 = InOut.f95 ToolBox.f95 Dynamics.f95 OrderVerif.f95 main.f95
@@ -16,7 +15,7 @@ OBJF95 = $(SRCF95:.f95=.o)
 
 # Target
 $(EXE): $(OBJF95)
-	$(F95) $(OBJF95) -o $@
+	$(F95) -fopenmp $(OBJF95) -o $@
 
 .PHONY: run
 run: $(EXE) plot.py
