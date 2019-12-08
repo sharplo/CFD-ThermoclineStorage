@@ -63,19 +63,20 @@ def Plot_Line_2(fileName_1, fileName_2):
 	plt.savefig("./figures/"+ fileName_2[0:-4] + ".png")
 	plt.close()
 
-Plot_Line("storstate.dat")
 """
 Plot_Line_2("sol-exact.dat", "charge.dat")
 """
-Plot_Line("Cycle_f.dat")
-Plot_Line("Cycle_s.dat")
-
-#Plot_Line("Temp_f.dat")
+Plot_Line("charge.dat")
+Plot_Line("dischg.dat")
+Plot_Line("Motion_f.dat")
+Plot_Line("Motion_s.dat")
+"""
+Plot_Line("Temp_f.dat")
 Plot_Line("Temp_s.dat")
-#Plot_Line("discErr_f.dat")
+Plot_Line("discErr_f.dat")
 Plot_Line("discErr_s.dat")
-#Plot_LineSlope("discErr_f.dat")
+Plot_LineSlope("discErr_f.dat")
 Plot_LineSlope("discErr_s.dat")
-#Plot_Line("discLoc_f.dat")
+Plot_Line("discLoc_f.dat")
 Plot_Line("discLoc_s.dat")
-
+"""

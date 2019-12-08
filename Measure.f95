@@ -1,4 +1,4 @@
-MODULE Tools
+MODULE Measurements
 
 	USE Input_Output
 
@@ -103,4 +103,4 @@ CONTAINS
 
 	END FUNCTION MaxEnergyStored
 
-END MODULE Tools
+END MODULE Measurements

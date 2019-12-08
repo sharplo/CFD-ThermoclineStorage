@@ -5,7 +5,7 @@ F95 = gfortran
 FLAGS = -fdefault-real-8 -fopenmp -O3
 
 # Source and object
-SRCF95 = InOut.f95 ToolBox.f95 Dynamics.f95 OrderVerif.f95 main.f95
+SRCF95 = InOut.f95 Measure.f95 Dynamics.f95 OrderVerif.f95 Cycle.f95 main.f95
 
 # Pattern rules
 %.o: %.f95
@@ -26,6 +26,6 @@ clean:
 	rm $(OBJF95) *.mod $(EXE)
 
 # Dependencies
-main.o: InOut.o Dynamics.o OrderVerif.o
-OrderVerif.o: InOut.o ToolBox.o Dynamics.o
-Dynamics.o: InOut.o ToolBox.o
+main.o: OrderVerif.o Cycle.o
+OrderVerif.o: InOut.o Measure.o Dynamics.o
+Dynamics.o: InOut.o Measure.o

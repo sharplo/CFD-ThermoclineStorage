@@ -1,7 +1,7 @@
 MODULE Order_Verification
 	
 	USE Input_Output
-	USE Tools
+	USE Measurements
 	USE Dynamics
 	USE OMP_LIB
 
@@ -55,6 +55,7 @@ CONTAINS
 				WRITE(*,*) "Solid phase:"
 				WRITE(*,*) "dT/dt =", stdyErr_s(2)/dt, "stdyInfLoc =", INT(stdyErr_s(4))
 				WRITE(*,*) "discL2 =", discErr_s(2), "dicsInfLoc =", INT(discErr_s(4))
+				WRITE(*,"(A)")
 			END IF
 
 			IF (stdyErr_f(2)/dt < ErrThd*discErr_f(2) &
@@ -90,7 +91,7 @@ CONTAINS
 		CHARACTER(LEN=6) :: label(3), label2(4), label3(2)
 
 		k = 2*Pi*waveNum/height	
-		pt = pt_f - pt_i + 1 ! number of points in graphs for OVS
+		pt = pt_f - pt_i + 1 ! number of points in the plots of OVS
 
 		ALLOCATE(errArr_f(4,pt), errArr_s(4,pt), locArr_f(2,pt), locArr_s(2,pt), STAT=errorFlag)
 		IF (errorFlag /= 0) THEN
@@ -114,8 +115,8 @@ CONTAINS
 
 			! Manufactured solutions
 			DO j = 1,nCells
-				manSol_f(j) = 2 + cos(k*dx*(j-1./2)) ! T(x) = 2 + cos(kx)
-				manSol_s(j) = 2 + cos(2*k*dx*(j-1./2)) ! T(x) = 2 + cos(2kx)
+				manSol_f(j) = 2. + cos(k*dx*(j-1./2)) ! T(x) = 2 + cos(kx)
+				manSol_s(j) = 2. + cos(2.*k*dx*(j-1./2)) ! T(x) = 2 + cos(2kx)
 			END DO
 			
 			! Take manufactured solutions as initial conditions
@@ -130,7 +131,7 @@ CONTAINS
 			discErr_s(:) = ErrorNorms(nCells, Temp_s, manSol_s, .TRUE.)
 			
 			! Visualize approximate solutions and manufactured solutions
-			IF (nCells == 2**3) THEN
+			IF (nCells == 2**10) THEN
 				CALL VisualTemp(nCells, Temp_f, Temp_s, .TRUE., manSol_f, manSol_s)
 			END IF
 
