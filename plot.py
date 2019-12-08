@@ -44,33 +44,27 @@ def Plot_LineSlope(fileName):
 
 def Plot_Line_2(fileName_1, fileName_2):
 	with open(fileName_1, "r") as f1:
+		axisLabel_1 = f1.readline().split()
 		lineLabel_1 = f1.readline().split()
 		xy_1 = np.loadtxt(f1, usecols = np.arange(0, len(lineLabel_1) ))
 	
 	with open(fileName_2, "r") as f2:
-		axisLabel_2 = f2.readline().split()
 		lineLabel_2 = f2.readline().split()
 		xy_2 = np.loadtxt(f2, usecols = np.arange(0, len(lineLabel_2) ))
 	
-	for i in range(1,len(lineLabel_2)):
-		plt.plot(xy_1[:,0], xy_1[:,i], ":")
-		plt.plot(xy_2[:,0], xy_2[:,i], ".-")
+	for i in range(1,len(lineLabel_1)):
+		plt.plot(xy_1[:,0], xy_1[:,i], "-")
+		plt.plot(xy_2[:,0], xy_2[:,i], ":")
 
-	plt.xlabel(axisLabel_2[0])
-	plt.ylabel(axisLabel_2[1])
-	plt.legend([linelabel_1[1:], lineLabel_2[1:]])
+	plt.xlabel(axisLabel_1[0])
+	plt.ylabel(axisLabel_1[1])
+	plt.legend(["appSol_f", "exSol_f", "appSol_s", "exSol_s"])
 
-	plt.savefig("./figures/"+ fileName_2[0:-4] + ".png")
+	plt.savefig("./figures/CompEx.png")
 	plt.close()
 
 """
-Plot_Line_2("sol-exact.dat", "charge.dat")
-"""
-Plot_Line("charge.dat")
-Plot_Line("dischg.dat")
-Plot_Line("Motion_f.dat")
-Plot_Line("Motion_s.dat")
-"""
+#OVS & PIM
 Plot_Line("Temp_f.dat")
 Plot_Line("Temp_s.dat")
 Plot_Line("discErr_f.dat")
@@ -79,4 +73,15 @@ Plot_LineSlope("discErr_f.dat")
 Plot_LineSlope("discErr_s.dat")
 Plot_Line("discLoc_f.dat")
 Plot_Line("discLoc_s.dat")
+"""
+#VisualMotion of thermocline
+Plot_Line("Motion_f.dat")
+Plot_Line("Motion_s.dat")
+
+#Compare with Exact Solutions
+Plot_Line_2("charge.dat", "sol-exact.dat")
+"""
+#StorageCycle
+Plot_Line("charge.dat")
+Plot_Line("dischg.dat")
 """
