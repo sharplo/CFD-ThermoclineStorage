@@ -1,128 +1,84 @@
 PROGRAM main
 
 	USE Input_Output
-	USE Measurements
-	USE Dynamics
 	USE Order_Verification
 	USE Thermocline_Cycle
 
-	! Order verification study with/without source term
-!	CALL GridRefinement()
+	IMPLICIT NONE
 
-	! Visualize thermocline motions
-!	CALL VisualMotion(2**12, 873., 293., (/21600., 21600., 21600., 21600./))
+	INTEGER :: errorFlag, nCells
 
-	! Compare with exact solutions
-!	CALL CompareExSol(2**12, 873., 293., (/5000., 0., 0., 0./))
+	NAMELIST /inputs/ study, nCells, ErrThd, volume, diameter, dt, &
+		rho_f, C_f, rho_s, C_s, eps, d_s, k_s, k_f, mu_f, dm, &
+		height, u_f, alpha_f, alpha_s, h_v, &
+		waveNum, pt_i, pt_f, MaxTStep
 
-	! Real simulation
-	CALL SteadyCycle(2**12, 873., 293., (/21600., 21600., 21600., 21600./))
+	! Parameters to be used when not properly specified in "parameters.dat"
+	ErrThd = 1E-5; nCells = 1024; MaxTStep = 1E7; waveNum = 1; pt_i = 3; pt_f = 6
+	volume = 300.; diameter = 4; dt = 10.
+	rho_f = 1835.6; C_f = 1511.8; rho_s = 2600.; C_s = 900; eps = 0.4
+	d_s = 0.03; k_s = 2.; k_f = 0.52; mu_f = 2.63; dm = 10.
 
-
-CONTAINS
-
-	SUBROUTINE SteadyCycle(nCells, Temp_c, Temp_d, duration)
-
-		IMPLICIT NONE
-
-		REAL, INTENT(IN)  :: Temp_d, Temp_c, duration(4)
-		INTEGER, INTENT(IN) :: nCells
-
-		REAL :: Temp_f(nCells), Temp_s(nCells), dx, time, &
-			enEff_c, enEff_d, preEff, cycEff, storEn, maxEn, capFact
-		INTEGER :: nCycle
-
-		dx = height/nCells
-		Temp_f(:) = Temp_d; Temp_s(:) = Temp_d
+	height = volume*4/(Pi*diameter**2); u_f = dm/(rho_f*eps*Pi*diameter**2/4)
+	alpha_f = k_f/(eps*rho_f*C_f); alpha_s = k_s/((1.-eps)*rho_s*C_s)
+	Pr = mu_f*C_f/k_f; Re = eps*rho_f*u_f*d_s/mu_f
+	Nu = 0.255/eps*Pr**(1./3)*Re**(2./3)
+	h_fs = Nu*k_f/d_s; h = 1/(1/h_fs + d_s/(10*k_s)); h_v = 6*(1-eps)*h/d_s
+	h_vf = h_v/(eps*rho_f*C_f); h_vs = h_v/((1.-eps)*rho_s*C_s)
 		
-		enEff_c = 0.
-		enEff_d = 0.
-		cycEff = 0.
-		preEff = 0.
+	OPEN(1, FILE="parameters.dat", STATUS="old", IOSTAT=errorFlag)
+	IF (errorFlag /= 0) THEN
+		WRITE(*,*) "Error: Could not open file!"
+		STOP
+	END IF
+	READ(1, inputs)
+	CLOSE(1, IOSTAT=errorFlag)
+	IF (errorFlag /= 0) THEN
+		WRITE(*,*) "Error: Could not close file!"
+		STOP
+	END IF
+	WRITE(*,inputs)
 
-		nCycle = 0
-		DO WHILE (ABS(cycEff - preEff) >= ErrThd*preEff)
+	IF (TRIM(study) == "OVS") THEN
+
+		h_vf = h_v/(eps*rho_f*C_f); h_vs = h_v/((1.-eps)*rho_s*C_s)
 		
-			preEff = cycEff
+		! Order verification study with source term
+		CALL GridRefinement()
 
-			! Charging phase
-			time = 0.
-			! Trapezoid rule: boundary term
-			enEff_c = enEff_c + Temp_f(nCells) - Temp_f(1) - Temp_ref*LOG(Temp_f(nCells)/Temp_f(1))
-			DO WHILE (time < duration(1))
-				CALL EvolveTemp(Temp_f, nCells, Temp_c, "fluid", "charge", .FALSE.)
-				CALL EvolveTemp(Temp_s, nCells, 0., "solid", "charge", .FALSE.)
-				CALL PointImplicitMethod(Temp_f, Temp_s, nCells)
-				time = time + dt
-				! Trapezoid rule: interior terms
-				enEff_c = enEff_c + 2*( Temp_f(nCells) - Temp_f(1) - Temp_ref*LOG(Temp_f(nCells)/Temp_f(1)) )
-			END DO
-			! Trapezoid rule: boundary term was double counted
-			enEff_c = enEff_c - ( Temp_f(nCells) - Temp_f(1) - Temp_ref*LOG(Temp_f(nCells)/Temp_f(1)) )
+	ELSE IF (TRIM(study) == "exSol") THEN
+
+		u_f = dm/(rho_f*eps*Pi*diameter**2/4)
+		alpha_f = k_f/(eps*rho_f*C_f); alpha_s = k_s/((1.-eps)*rho_s*C_s)
+		Pr = mu_f*C_f/k_f; Re = eps*rho_f*u_f*d_s/mu_f
+		Nu = 0.255/eps*Pr**(1./3)*Re**(2./3)
+		h_fs = Nu*k_f/d_s; h = 1/(1/h_fs + d_s/(10*k_s)); h_v = 6*(1-eps)*h/d_s
+		h_vf = h_v/(eps*rho_f*C_f); h_vs = h_v/((1.-eps)*rho_s*C_s)
+
+		! Visualize thermocline motions of one cycle
+!		CALL VisualMotion(2**10, 873., 293., (/21600., 21600., 21600., 21600./))
+
+		! Compare with exact solutions
+		CALL CompareExSol(nCells, 873., 293., (/5000., 0., 0., 0./))
+
+	ELSE IF (TRIM(study) == "realSim") THEN
 		
-			! Idling phase
-			time = 0.
-			DO WHILE (time < duration(2))
-				CALL EvolveTemp(Temp_f, nCells, 0., "fluid", "idling", .FALSE.)
-				CALL EvolveTemp(Temp_s, nCells, 0., "solid", "idling", .FALSE.)
-				CALL PointImplicitMethod(Temp_f, Temp_s, nCells)
-				time = time + dt
-			END DO
+		height = volume*4/(Pi*diameter**2); u_f = dm/(rho_f*eps*Pi*diameter**2/4)
+		alpha_f = k_f/(eps*rho_f*C_f); alpha_s = k_s/((1.-eps)*rho_s*C_s)
+		Pr = mu_f*C_f/k_f; Re = eps*rho_f*u_f*d_s/mu_f
+		Nu = 0.255/eps*Pr**(1./3)*Re**(2./3)
+		h_fs = Nu*k_f/d_s; h = 1/(1/h_fs + d_s/(10*k_s)); h_v = 6*(1-eps)*h/d_s
+		h_vf = h_v/(eps*rho_f*C_f); h_vs = h_v/((1.-eps)*rho_s*C_s)
 
-			storEn = ThermalEnergy(nCells, Temp_f, Temp_s, Temp_d)
-
-			! Discharging phase
-			time = 0.
-			enEff_d = enEff_d + Temp_f(nCells) - Temp_f(1) - Temp_ref*LOG(Temp_f(nCells)/Temp_f(1))
-			DO WHILE (time < duration(3))
-				CALL EvolveTemp(Temp_f, nCells, Temp_d, "fluid", "dischg", .FALSE.)
-				CALL EvolveTemp(Temp_s, nCells, 0., "solid", "dischg", .FALSE.)
-				CALL PointImplicitMethod(Temp_f, Temp_s, nCells)
-				time = time + dt
-				enEff_d = enEff_d + 2*( Temp_f(nCells) - Temp_f(1) - Temp_ref*LOG(Temp_f(nCells)/Temp_f(1)) )
-			END DO
-			enEff_d = enEff_d - ( Temp_f(nCells) - Temp_f(1) - Temp_ref*LOG(Temp_f(nCells)/Temp_f(1)) )
+		! Visualize thermocline motions of the first cycle
+!		CALL VisualMotion(2**10, 873., 293., (/21600., 21600., 21600., 21600./))
 		
-			! Idling phase
-			time = 0.
-			DO WHILE (time < duration(4))
-				CALL EvolveTemp(Temp_f, nCells, 0., "fluid", "idling", .FALSE.)
-				CALL EvolveTemp(Temp_s, nCells, 0., "solid", "idling", .FALSE.)
-				CALL PointImplicitMethod(Temp_f, Temp_s, nCells)
-				time = time + dt
-			END DO
+		! Real simulation
+		CALL SteadyCycle(nCells, 873., 293., (/21600., 21600., 21600., 21600./))
 
-			cycEff = enEff_d/enEff_c
-			nCycle = nCycle + 1
-			
-			IF (enEff_c == 0) THEN
-				WRITE(*,*) "Error: Division of 0!"
-				STOP
-			ELSE IF (MOD(nCycle,100) == 0) THEN
-				WRITE(*,*) "nCycle", nCycle, "cycEff", cycEff
-			END IF
-
-		END DO
-		PRINT*, "Total nCycle", nCycle
-
-		storEn = storEn - ThermalEnergy(nCells, Temp_f, Temp_s, Temp_d)
-		maxEn = MaxEnergyStored(Temp_c, Temp_d)
-		capFact = storEn/maxEn
-			
-		! Undergo the charging phase once more to get Temperature outflow
-		time = 0.
-		DO WHILE (time < duration(1))
-			CALL EvolveTemp(Temp_f, nCells, Temp_c, "fluid", "charge", .FALSE.)
-			CALL EvolveTemp(Temp_s, nCells, 0., "solid", "charge", .FALSE.)
-			CALL PointImplicitMethod(Temp_f, Temp_s, nCells)
-			time = time + dt
-		END DO
-		
-		WRITE(*, "(A)")
-		WRITE(*,*) "Temperature increase at outflow", Temp_f(nCells) - Temp_d
-		WRITE(*,*) "Cycle energy efficiency", cycEff
-		WRITE(*,*) "Capacity factor", capFact
-
-	END SUBROUTINE SteadyCycle
+	ELSE
+		WRITE(*,*) "Error: 'study' does not have this option!"
+		STOP
+	END IF
 
 END PROGRAM main

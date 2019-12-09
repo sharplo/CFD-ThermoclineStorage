@@ -63,7 +63,6 @@ def Plot_Line_2(fileName_1, fileName_2):
 	plt.savefig("./figures/CompEx.png")
 	plt.close()
 
-"""
 #OVS & PIM
 Plot_Line("Temp_f.dat")
 Plot_Line("Temp_s.dat")
@@ -73,7 +72,7 @@ Plot_LineSlope("discErr_f.dat")
 Plot_LineSlope("discErr_s.dat")
 Plot_Line("discLoc_f.dat")
 Plot_Line("discLoc_s.dat")
-"""
+
 #VisualMotion of thermocline
 Plot_Line("Motion_f.dat")
 Plot_Line("Motion_s.dat")

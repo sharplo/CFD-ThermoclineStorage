@@ -2,67 +2,15 @@ MODULE Input_Output
 
 	IMPLICIT NONE
 	
-	REAL, PARAMETER :: Pi = 4.*ATAN(1.), ErrThd = 1E-5, &
-!		height = 1., diameter = 1., dt = 1E-2, &
-!		u_f = 1E-1, alpha_f = 2E-7, alpha_s = 9E-7, h_v = 1E3, &
-!		rho_f = 1899., C_f = 1495., rho_s = 2600., C_s = 900, eps = 0.4, &
-		volume = 300., diameter = 6, dt = 1.5, &
-		rho_f = 1835.6, C_f = 1511.8, rho_s = 2600., C_s = 900, eps = 0.4, &
-		d_s = 0.03, k_s = 2., k_f = 0.52, mu_f = 2.63, dm = 10., Temp_ref = 288.15, &
-
-		height = volume*4/(Pi*diameter**2), u_f = dm/(rho_f*eps*Pi*diameter**2/4), &
-		alpha_f = k_f/(eps*rho_f*C_f), alpha_s = k_s/((1.-eps)*rho_s*C_s), &
-		Pr = mu_f*C_f/k_f, Re = eps*rho_f*u_f*d_s/mu_f, &
-		Nu = 0.255/eps*Pr**(1./3)*Re**(2./3), &
-		h_fs = Nu*k_f/d_s, h = 1/(1/h_fs + d_s/(10*k_s)), h_v = 6*(1-eps)*h/d_s, &
-		
-		h_vf = h_v/(eps*rho_f*C_f), h_vs = h_v/((1.-eps)*rho_s*C_s)
-
-	INTEGER, PARAMETER :: waveNum = 1, pt_i = 3, pt_f = 6
-	INTEGER*8, PARAMETER :: MaxTStep = 1E7
+	REAL, PARAMETER :: Pi = 4.*ATAN(1.), Temp_ref = 288.15
+	REAL :: ErrThd, volume, diameter, dt, &
+		rho_f, C_f, rho_s, C_s, eps, d_s, k_s, k_f, mu_f, dm, &
+		height, u_f, alpha_f, alpha_s, Pr, Re, Nu, h_fs, h, h_v, h_vf, h_vs
+	INTEGER :: waveNum, pt_i, pt_f
+	INTEGER*8 :: MaxTStep
+	CHARACTER(LEN=7) :: study
 
 CONTAINS
-
-	SUBROUTINE Input(height, diameter, nCells, Temp_i, u_f, alpha_f, alpha_s, duration, Temp_f, Temp_s, nCycles, nTSteps)
-	
-	IMPLICIT NONE
-
-	REAL, INTENT(OUT) :: height, diameter, Temp_i, u_f, alpha_f, alpha_s
-	REAL, DIMENSION(4), INTENT(OUT) :: duration
-	REAL, ALLOCATABLE, INTENT(OUT) :: Temp_f(:), Temp_s(:)
-	INTEGER, INTENT(OUT) :: nCells, nCycles, nTSteps
-	
-	INTEGER :: errorFlag
-
-	WRITE(*,*) "Please input the height and diameter of the cylindrical storage:"
-	READ(*,*) height, diameter
-	WRITE(*,*) "Please input the number of cells inside the storage:"
-	READ(*,*) nCells
-	WRITE(*,*) "Please input the initial temperarutre of the fluid and solid phases (equal):"
-	READ(*,*) Temp_i
-	
-	ALLOCATE(Temp_f(nCells), Temp_s(nCells), STAT=errorFlag)
-	IF (errorFlag /= 0) THEN
-		WRITE(*,*) "Error: could not allocate Temp_f, Temp_s!"
-		STOP
-	END IF
-	
-	Temp_f(:) = Temp_i
-	Temp_s(:) = Temp_i
-
-	WRITE(*,*) "Please input the durations of the four states:"
-	READ(*,*) duration(1), duration(2), duration(3), duration(4)
-	WRITE(*,*) "Please input the number of cycles:"
-	READ(*,*) nCycles
-	WRITE(*,*) "Please input the number of time steps per cycle:"
-	READ(*,*) nTSteps
-
-	WRITE(*,*) "Please input the velocity u_f:"
-	READ(*,*) u_f
-	WRITE(*,*) "Please input the diffusivities for fluid and solid phases respectively:"
-	READ(*,*) alpha_f, alpha_s
-
-	END SUBROUTINE Input
 
 	SUBROUTINE PlotFigure(fileUnit, fileName, xLabel, yLabel, lineLabel, nx, ny, arr)
 		

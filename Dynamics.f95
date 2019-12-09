@@ -21,19 +21,19 @@ CONTAINS
 		LOGICAL, INTENT(IN) :: MMS
 
 		INTEGER :: i
-		REAL :: dx, sigma, d, k, k_f, k_s, h_c, flux, manSol, allFlux(nCells)
+		REAL :: dx, sigma, d, k, kn_f, kn_s, h_c, flux, manSol, allFlux(nCells)
 		
 		dx = height/nCells
-		k_f = 2*Pi*waveNum/height; k_s = 2*k_f ! for MMS only
+		kn_f = 2*Pi*waveNum/height; kn_s = 2*kn_f ! for MMS only
 		IF (phase == "fluid") THEN
 			sigma = u_f*dt/dx
 			d = alpha_f*dt/(dx*dx)
-			k = k_f ! for MMS only
+			k = kn_f ! for MMS only
 			h_c = h_vf*dt/dx ! for MMS only
 		ELSE IF (phase == "solid") THEN
 			sigma = 0
 			d = alpha_s*dt/(dx*dx)
-			k = k_s ! for MMS only
+			k = kn_s ! for MMS only
 			h_c = - h_vs*dt/dx ! for MMS only
 		ELSE
 			WRITE(*,*) "Error: phase can be only either 'fluid' or 'solid'!"
@@ -54,7 +54,7 @@ CONTAINS
 			DO i = 1,nCells-1
 				flux = -sigma*Temp(i) + d*(Temp(i+1) - Temp(i))
 				manSol = sigma*cos(k*dx*i) + d*dx*k*sin(k*dx*i) &
-					+ h_c*(sin(k_f*dx*i)/k_f - sin(k_s*dx*i)/k_s)
+					+ h_c*(sin(kn_f*dx*i)/kn_f - sin(kn_s*dx*i)/kn_s)
 				allFlux(i) = allFlux(i) + flux + manSol
 				allFlux(i+1) = allFlux(i+1) - flux - manSol
 			END DO
