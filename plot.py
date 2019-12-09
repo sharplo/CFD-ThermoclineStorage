@@ -8,7 +8,7 @@ def Plot_Line(fileName):
 		xy = np.loadtxt(f, usecols = np.arange(0, len(lineLabel) ))
 	
 	for i in range(1,len(lineLabel)):
-		plt.plot(xy[:,0], xy[:,i], ".-")
+		plt.plot(xy[:,0], xy[:,i], "-")
 
 	plt.xlabel(axisLabel[0])
 	plt.ylabel(axisLabel[1])
@@ -80,8 +80,8 @@ Plot_Line("Motion_s.dat")
 
 #Compare with Exact Solutions
 Plot_Line_2("charge.dat", "sol-exact.dat")
-"""
+
 #StorageCycle
 Plot_Line("charge.dat")
 Plot_Line("dischg.dat")
-"""
+

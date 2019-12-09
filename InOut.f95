@@ -2,14 +2,15 @@ MODULE Input_Output
 
 	IMPLICIT NONE
 	
-	REAL, PARAMETER :: Pi = 4.*ATAN(1.), ErrThd = 1E-2, &
-		height = 1., diameter = 1., dt = 1E-2, &
+	REAL, PARAMETER :: Pi = 4.*ATAN(1.), ErrThd = 1E-5, &
+!		height = 1., diameter = 1., dt = 1E-2, &
 !		u_f = 1E-1, alpha_f = 2E-7, alpha_s = 9E-7, h_v = 1E3, &
 !		rho_f = 1899., C_f = 1495., rho_s = 2600., C_s = 900, eps = 0.4, &
+		volume = 300., diameter = 6, dt = 1.5, &
 		rho_f = 1835.6, C_f = 1511.8, rho_s = 2600., C_s = 900, eps = 0.4, &
-		d_s = 0.03, k_s = 2., k_f = 0.52, mu_f = 2.63, dm = 0.1, &
+		d_s = 0.03, k_s = 2., k_f = 0.52, mu_f = 2.63, dm = 10., Temp_ref = 288.15, &
 
-		u_f = dm/(rho_f*eps*Pi*diameter**2/4), &
+		height = volume*4/(Pi*diameter**2), u_f = dm/(rho_f*eps*Pi*diameter**2/4), &
 		alpha_f = k_f/(eps*rho_f*C_f), alpha_s = k_s/((1.-eps)*rho_s*C_s), &
 		Pr = mu_f*C_f/k_f, Re = eps*rho_f*u_f*d_s/mu_f, &
 		Nu = 0.255/eps*Pr**(1./3)*Re**(2./3), &

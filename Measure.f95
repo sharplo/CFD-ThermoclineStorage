@@ -45,32 +45,6 @@ CONTAINS
 
 	END FUNCTION ErrorNorms
 
-	REAL FUNCTION EnergyFlux(nTStps, Temp, Temp_ref)
-
-		IMPLICIT NONE
-
-		INTEGER, INTENT(IN) :: nTStps
-		REAL, INTENT(IN) :: Temp(nTStps), Temp_ref
-
-		INTEGER :: i
-		REAL :: var
-		REAL :: dm=1 ! need to be deleted
-		EnergyFlux = 0
-
-		! Trapezoid rule
-		var = Temp(1) - Temp_ref - Temp_ref*LOG(Temp(1)/Temp_ref)
-		EnergyFlux = EnergyFlux + var
-		DO i = 2,nTStps-1
-			var = Temp(i) - Temp_ref - Temp_ref*LOG(Temp(i)/Temp_ref)
-			EnergyFlux = EnergyFlux + 2*var
-		END DO
-		var = Temp(nTStps) - Temp_ref - Temp_ref*LOG(Temp(nTStps)/Temp_ref)
-		EnergyFlux = EnergyFlux + var
-
-		EnergyFlux = EnergyFlux*dm*C_f*dt/2
-
-	END FUNCTION EnergyFlux
-
 	REAL FUNCTION ThermalEnergy(nCells, Temp_f, Temp_s, Temp_d)
 		
 		IMPLICIT NONE

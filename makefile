@@ -26,6 +26,8 @@ clean:
 	rm $(OBJF95) *.mod $(EXE)
 
 # Dependencies
-main.o: OrderVerif.o Cycle.o
+main.o: InOut.o Measure.o Dynamics.o OrderVerif.o Cycle.o
+Cycle.o: InOut.o Dynamics.o OrderVerif.o
 OrderVerif.o: InOut.o Measure.o Dynamics.o
 Dynamics.o: InOut.o Measure.o
+Measure.o: InOut.o
